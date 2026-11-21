@@ -300,6 +300,7 @@ export class AlarmoCard extends SubscribeMixin(LitElement) {
         </div>
 
         ${this._renderWarning()}
+        ${this._renderConfirmation()}
 
         <div id="actions" class="actions">
           ${this._renderActions()}
@@ -456,6 +457,62 @@ export class AlarmoCard extends SubscribeMixin(LitElement) {
       `;
     }
     return html``;
+  }
+
+  private _renderConfirmation() {
+    if (!this.hass || !this._config || !this._config.show_messages) return html``;
+    const stateObj = this.hass.states[this._config.entity] as AlarmoEntity;
+    const confirmedBy = [
+      ...(stateObj.attributes.confirmation_status == 'confirmed' ? stateObj.attributes.confirmed_by || [] : []),
+      ...(stateObj.attributes.hold_up_status == 'confirmed' ? stateObj.attributes.hold_up_confirmed_by || [] : []),
+    ];
+    if (!confirmedBy.length && !stateObj.attributes.reset_required) return html``;
+    return html`
+      <div class="messagebox">
+        <div class="messagebox-left"></div>
+        <div class="messagebox-inner">
+          <div class="description">
+            <div class="description-filler"></div>
+            <span>
+              <ha-icon icon="hass:shield-alert"></ha-icon>
+              ${localize('errors.confirmed_by', this.hass.language)}
+            </span>
+            <div class="description-filler"></div>
+          </div>
+          <div class="content">
+            ${confirmedBy.map(e => {
+      if (!this.subscribedEntities.includes(e)) this.subscribedEntities.push(e);
+      return html`
+                <div class="badge">
+                  <alarmo-sensor-badge .hass=${this.hass} .entity=${e}> </alarmo-sensor-badge>
+                </div>
+              `;
+    })}
+          </div>
+          ${stateObj.attributes.reset_required
+        ? html`
+                <alarmo-button
+                  @click=${this._resetConfirmationClick}
+                  style="--content-scale: ${this._config!.button_scale_actions}"
+                  ?scaled=${this._config!.button_scale_actions != 1}
+                >
+                  <span>${localize('errors.reset_confirmation', this.hass.language)}</span>
+                </alarmo-button>
+              `
+        : ''}
+        </div>
+        <div class="messagebox-right"></div>
+      </div>
+    `;
+  }
+
+  private _resetConfirmationClick(ev: Event) {
+    (ev.target as HTMLElement).blur();
+    this.hass!.callService('alarmo', 'reset_confirmation', {
+      entity_id: this._config!.entity,
+      code: this._input,
+    });
+    this._clearCode();
   }
 
   private _handlePadClick(e: MouseEvent): void {

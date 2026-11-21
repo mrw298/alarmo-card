@@ -43,6 +43,11 @@ export type AlarmoEntity = HassEntity & {
     code_format?: string;
     code_arm_required?: boolean;
     bypassed_sensors?: string[];
+    confirmation_status?: string;
+    confirmed_by?: string[];
+    hold_up_status?: string;
+    hold_up_confirmed_by?: string[];
+    reset_required?: boolean;
   };
 };
 
